@@ -286,14 +286,16 @@ public class LogUnitServer extends AbstractServer {
     @ServerHandler(type = CorfuMsgType.READ_REQUEST)
     private void read(CorfuPayloadMsg<ReadRequest> msg, ChannelHandlerContext ctx, IServerRouter r) {
         long address = msg.getPayload().getAddress();
-        log.trace("read: {}", msg.getPayload().getAddress());
+        boolean cacheable = msg.getPayload().isCacheableOnServer();
+        log.trace("read: {}, cacheable: {}", msg.getPayload().getAddress(), cacheable);
+
         ReadResponse rr = new ReadResponse();
         try {
-            ILogData e = dataCache.get(address);
-            if (e == null) {
+            ILogData ld = readSingle(address, cacheable);
+            if (ld == null) {
                 rr.put(address, LogData.getEmpty(address));
             } else {
-                rr.put(address, (LogData) e);
+                rr.put(address, (LogData) ld);
             }
             r.sendResponse(ctx, msg, CorfuMsgType.READ_RESPONSE.payloadMsg(rr));
         } catch (DataCorruptionException e) {
@@ -303,22 +305,32 @@ public class LogUnitServer extends AbstractServer {
 
     @ServerHandler(type = CorfuMsgType.MULTIPLE_READ_REQUEST)
     private void multiRead(CorfuPayloadMsg<MultipleReadRequest> msg, ChannelHandlerContext ctx, IServerRouter r) {
-        log.trace("multiRead: {}", msg.getPayload().getAddresses());
+        boolean cacheable = msg.getPayload().isCacheableOnServer();
+        log.trace("multiRead: {}, cacheable: {}", msg.getPayload().getAddresses(), cacheable);
 
         ReadResponse rr = new ReadResponse();
         try {
-            for (Long l : msg.getPayload().getAddresses()) {
-                ILogData e = dataCache.get(l);
-                if (e == null) {
-                    rr.put(l, LogData.getEmpty(l));
+            for (Long address : msg.getPayload().getAddresses()) {
+                ILogData ld = readSingle(address, cacheable);
+                if (ld == null) {
+                    rr.put(address, LogData.getEmpty(address));
                 } else {
-                    rr.put(l, (LogData) e);
+                    rr.put(address, (LogData) ld);
                 }
             }
             r.sendResponse(ctx, msg, CorfuMsgType.READ_RESPONSE.payloadMsg(rr));
         } catch (DataCorruptionException e) {
             r.sendResponse(ctx, msg, CorfuMsgType.ERROR_DATA_CORRUPTION.msg());
         }
+    }
+
+    private ILogData readSingle(long address, boolean cacheable) {
+        if (!cacheable) {
+            ILogData ld = dataCache.getIfPresent(address);
+            return ld != null ? ld : handleRetrieval(address);
+        }
+
+        return dataCache.get(address);
     }
 
     @ServerHandler(type = CorfuMsgType.COMPACT_REQUEST)

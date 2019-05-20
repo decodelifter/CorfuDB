@@ -86,8 +86,9 @@ public class StateTransfer {
 
             long ts1 = System.currentTimeMillis();
 
+            // Don't cache the read results on server for state transfer.
             Map<Long, ILogData> dataMap = runtime.getAddressSpaceView()
-                    .fetchAll(ContiguousSet.create(Range.closed(chunkStart, chunkEnd),
+                    .nonCacheFetchAll(ContiguousSet.create(Range.closed(chunkStart, chunkEnd),
                             DiscreteDomain.longs()), true);
 
             long ts2 = System.currentTimeMillis();
@@ -104,7 +105,7 @@ public class StateTransfer {
             }
 
             for (String endpoint : endpoints) {
-                // Write segment chunk to the new logunit
+                // Write segment chunk to the new log unit
                 ts1 = System.currentTimeMillis();
                 boolean transferSuccess = runtime.getLayoutView().getRuntimeLayout(layout)
                         .getLogUnitClient(endpoint)

@@ -3,9 +3,7 @@ package org.corfudb.protocols.wireprotocol;
 import io.netty.buffer.ByteBuf;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -16,8 +14,12 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class MultipleReadRequest implements ICorfuPayload<MultipleReadRequest> {
-    @Getter
+
+    // List of requested addresses to read.
     final List<Long> addresses;
+
+    // Whether the read results should be cached on server.
+    final boolean cacheableOnServer;
 
     /**
      * Deserialization Constructor from ByteBuf to ReadRequest.
@@ -26,14 +28,12 @@ public class MultipleReadRequest implements ICorfuPayload<MultipleReadRequest> {
      */
     public MultipleReadRequest(ByteBuf buf) {
         addresses = ICorfuPayload.listFromBuffer(buf, Long.class);
-    }
-
-    public MultipleReadRequest(Long address) {
-        addresses = Collections.singletonList(address);
+        cacheableOnServer = buf.readBoolean();
     }
 
     @Override
     public void doSerialize(ByteBuf buf) {
         ICorfuPayload.serialize(buf, addresses);
+        buf.writeBoolean(cacheableOnServer);
     }
 }

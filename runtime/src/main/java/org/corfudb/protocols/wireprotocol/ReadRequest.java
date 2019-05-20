@@ -12,7 +12,11 @@ import lombok.Data;
 @AllArgsConstructor
 public class ReadRequest implements ICorfuPayload<ReadRequest> {
 
+    // Requested address to read.
     final long address;
+
+    // Whether the read result should be cached on server.
+    final boolean cacheableOnServer;
 
     /**
      * Deserialization Constructor from ByteBuf to ReadRequest.
@@ -21,11 +25,13 @@ public class ReadRequest implements ICorfuPayload<ReadRequest> {
      */
     public ReadRequest(ByteBuf buf) {
         address = buf.readLong();
+        cacheableOnServer = buf.readBoolean();
     }
 
     @Override
     public void doSerialize(ByteBuf buf) {
         buf.writeLong(address);
+        buf.writeBoolean(cacheableOnServer);
     }
 
 }
