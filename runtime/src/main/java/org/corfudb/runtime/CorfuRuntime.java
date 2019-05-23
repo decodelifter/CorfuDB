@@ -28,14 +28,7 @@ import org.corfudb.runtime.exceptions.NetworkException;
 import org.corfudb.runtime.exceptions.WrongClusterException;
 import org.corfudb.runtime.exceptions.unrecoverable.UnrecoverableCorfuError;
 import org.corfudb.runtime.exceptions.unrecoverable.UnrecoverableCorfuInterruptedError;
-import org.corfudb.runtime.view.AddressSpaceView;
-import org.corfudb.runtime.view.Layout;
-import org.corfudb.runtime.view.LayoutManagementView;
-import org.corfudb.runtime.view.LayoutView;
-import org.corfudb.runtime.view.ManagementView;
-import org.corfudb.runtime.view.ObjectsView;
-import org.corfudb.runtime.view.SequencerView;
-import org.corfudb.runtime.view.StreamsView;
+import org.corfudb.runtime.view.*;
 import org.corfudb.util.CFUtils;
 import org.corfudb.util.GitRepositoryState;
 import org.corfudb.util.MetricsUtils;
@@ -534,6 +527,9 @@ public class CorfuRuntime {
     public volatile UUID clusterId;
 
     @Getter
+    private volatile OrderedGuidGenerator guidGenerator;
+
+    @Getter
     final ViewsGarbageCollector garbageCollector = new ViewsGarbageCollector(this);
 
     /**
@@ -658,6 +654,9 @@ public class CorfuRuntime {
 
         // Set the initial cluster Id
         clusterId = parameters.getClusterId();
+
+        // Initialize the Guid Generator
+        guidGenerator = new SnowflakeGuidGenerator(System.identityHashCode(this));
 
         // Generate or set the NettyEventLoop
         nettyEventLoop = parameters.nettyEventLoop == null ? getNewEventLoopGroup()
